@@ -185,8 +185,6 @@ class UserManagement:
     def _is_name_valid(self, name: str) -> bool:
         return re.match(r"^[^!@#$%^&*()_+=-]*$", name) is not None
 
-if __name__ == "__main__":
-    UserManagement().start()
 
 
-a = "test"
+
