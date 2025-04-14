@@ -124,7 +124,6 @@ class UserManagement:
             if (user["email"] == email_or_phone or user["phone"] == email_or_phone) and user["password"] == password:
                 print(f"✅ Вход выполнен! Добро пожаловать, {user['name']}!")
                 self.current_user = user
-                # Создаем запись для задач, если ее нет
                 if user['email'] not in self.tasks:
                     self.tasks[user['email']] = []
                     self._save_tasks()
@@ -168,10 +167,52 @@ class UserManagement:
             print("У вас пока нет задач.")
             return
 
-        print("\nВаши задачи:")
-        for i, task in enumerate(self.tasks[user_email], 1):
-            status = "✓" if task['completed'] else "✗"
-            print(f"{i}. [{status}] {task['text']} (добавлено: {task.get('created_at', 'неизвестно')})")
+        while True:
+            print("\nВаши задачи:")
+            for i, task in enumerate(self.tasks[user_email], 1):
+                status = "✓" if task['completed'] else "✗"
+                print(f"{i}. [{status}] {task['text']} (добавлено: {task.get('created_at', 'неизвестно')})")
+
+            print("\nВыберите действие:")
+            print("1. Изменить статус задачи")
+            print("2. Удалить задачу")
+            print("0. Вернуться в главное меню")
+            
+            choice = input().strip()
+            
+            if choice == "1":
+                self._toggle_task_status(user_email)
+            elif choice == "2":
+                self._delete_task(user_email)
+            elif choice == "0":
+                break
+            else:
+                print("Некорректный выбор.")
+
+    def _toggle_task_status(self, user_email: str):
+        try:
+            task_num = int(input("Введите номер задачи для изменения статуса: ").strip())
+            if 1 <= task_num <= len(self.tasks[user_email]):
+                task = self.tasks[user_email][task_num - 1]
+                task['completed'] = not task['completed']
+                self._save_tasks()
+                print(f"Статус задачи '{task['text']}' изменен на {'✓' if task['completed'] else '✗'}")
+            else:
+                print("Неверный номер задачи.")
+        except ValueError:
+            print("Пожалуйста, введите число.")
+
+    def _delete_task(self, user_email: str):
+        try:
+            task_num = int(input("Введите номер задачи для удаления: ").strip())
+            if 1 <= task_num <= len(self.tasks[user_email]):
+                deleted_task = self.tasks[user_email].pop(task_num - 1)
+                self._save_tasks()
+                print(f"Задача '{deleted_task['text']}' удалена.")
+            else:
+                print("Неверный номер задачи.")
+        except ValueError:
+            print("Пожалуйста, введите число.")
 
     def _is_email_valid(self, email: str) -> bool:
         return re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$", email) is not None
