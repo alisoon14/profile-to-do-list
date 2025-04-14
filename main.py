@@ -5,7 +5,7 @@ from typing import List, Dict, Union
 from datetime import datetime
 
 class UserManagement:
-    def __init__(self):
+  
         self.DB_FILE = "users.json"
         self.TASKS_FILE = "users_tasks.json"
         self.users: List[Dict[str, str]] = self._load_users()
