@@ -227,6 +227,6 @@ class UserManagement:
         return re.match(r"^[^!@#$%^&*()_+=-]*$", name) is not None
 
 
-if __name__ == "__main__":
+if __name__ == "__pahan__":
     manager = UserManagement()
     manager.start()
