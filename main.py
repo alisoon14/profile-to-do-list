@@ -168,47 +168,81 @@ class UserManagement:
             return
 
         while True:
-            print("\nВаши задачи:")
-            for i, task in enumerate(self.tasks[user_email], 1):
+            print("\nФильтр задач:")
+            print("1. Все задачи")
+            print("2. Только активные")
+            print("3. Только выполненные")
+            print("0. Вернуться в меню")
+            
+            filter_choice = input("Выберите действие (0-3): ").strip()
+            
+            if filter_choice == "0":
+                break
+                
+            tasks_to_show = []
+            if filter_choice == "1":
+                tasks_to_show = self.tasks[user_email]
+                print("\nВсе задачи:")
+            elif filter_choice == "2":
+                tasks_to_show = [task for task in self.tasks[user_email] if not task['completed']]
+                print("\nАктивные задачи:")
+            elif filter_choice == "3":
+                tasks_to_show = [task for task in self.tasks[user_email] if task['completed']]
+                print("\nВыполненные задачи:")
+            else:
+                print("Некорректный выбор, попробуйте еще раз.")
+                continue
+
+            if not tasks_to_show:
+                print("Нет задач для отображения.")
+                continue
+
+            for i, task in enumerate(tasks_to_show, 1):
                 status = "✓" if task['completed'] else "✗"
                 print(f"{i}. [{status}] {task['text']} (добавлено: {task.get('created_at', 'неизвестно')})")
 
             print("\nВыберите действие:")
             print("1. Изменить статус задачи")
             print("2. Удалить задачу")
-            print("0. Вернуться в главное меню")
+            print("0. Вернуться к фильтрам")
             
-            choice = input().strip()
+            action_choice = input().strip()
             
-            if choice == "1":
-                self._toggle_task_status(user_email)
-            elif choice == "2":
-                self._delete_task(user_email)
-            elif choice == "0":
-                break
+            if action_choice == "1":
+                self._toggle_task_status(user_email, tasks_to_show)
+            elif action_choice == "2":
+                self._delete_task(user_email, tasks_to_show)
+            elif action_choice == "0":
+                continue
             else:
                 print("Некорректный выбор.")
 
-    def _toggle_task_status(self, user_email: str):
+    def _toggle_task_status(self, user_email: str, tasks_to_show: List[Dict]):
         try:
             task_num = int(input("Введите номер задачи для изменения статуса: ").strip())
-            if 1 <= task_num <= len(self.tasks[user_email]):
-                task = self.tasks[user_email][task_num - 1]
-                task['completed'] = not task['completed']
-                self._save_tasks()
-                print(f"Статус задачи '{task['text']}' изменен на {'✓' if task['completed'] else '✗'}")
+            if 1 <= task_num <= len(tasks_to_show):
+                
+                task_text = tasks_to_show[task_num - 1]['text']
+                for task in self.tasks[user_email]:
+                    if task['text'] == task_text:
+                        task['completed'] = not task['completed']
+                        self._save_tasks()
+                        print(f"Статус задачи '{task['text']}' изменен на {'✓' if task['completed'] else '✗'}")
+                        break
             else:
                 print("Неверный номер задачи.")
         except ValueError:
             print("Пожалуйста, введите число.")
 
-    def _delete_task(self, user_email: str):
+    def _delete_task(self, user_email: str, tasks_to_show: List[Dict]):
         try:
             task_num = int(input("Введите номер задачи для удаления: ").strip())
-            if 1 <= task_num <= len(self.tasks[user_email]):
-                deleted_task = self.tasks[user_email].pop(task_num - 1)
+            if 1 <= task_num <= len(tasks_to_show):
+                task_text = tasks_to_show[task_num - 1]['text']
+                
+                self.tasks[user_email] = [task for task in self.tasks[user_email] if task['text'] != task_text]
                 self._save_tasks()
-                print(f"Задача '{deleted_task['text']}' удалена.")
+                print(f"Задача '{task_text}' удалена.")
             else:
                 print("Неверный номер задачи.")
         except ValueError:
