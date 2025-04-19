@@ -6,9 +6,7 @@ from datetime import datetime
 from typing import List, Dict, Union
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'  # Замените на реальный секретный ключ
 
-# Конфигурация
 DB_FILE = "users.json"
 TASKS_FILE = "users_tasks.json"
 
