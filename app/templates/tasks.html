@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Мои задачи{% endblock %}
+
+{% block content %}
+<div class="tasks-container">
+    <h1>Мои задачи</h1>
+    <p>Добро пожаловать, {{ user.name }}!</p>
+    
+    <div class="task-filters">
+        <a href="{{ url_for('tasks', filter='all') }}" class="{% if filter_type == 'all' %}active{% endif %}">Все задачи</a>
+        <a href="{{ url_for('tasks', filter='active') }}" class="{% if filter_type == 'active' %}active{% endif %}">Активные</a>
+        <a href="{{ url_for('tasks', filter='completed') }}" class="{% if filter_type == 'completed' %}active{% endif %}">Выполненные</a>
+    </div>
+    
+    <form method="POST" action="{{ url_for('tasks', filter=filter_type) }}" class="add-task-form">
+        <input type="text" name="task_text" placeholder="Введите новую задачу" required>
+        <button type="submit" class="btn">Добавить задачу</button>
+    </form>
+    
+    {% if tasks %}
+    <ul class="task-list">
+        {% for task in tasks %}
+        <li class="task-item {% if task.completed %}completed{% endif %}">
+            <span class="task-text">{{ task.text }}</span>
+            <span class="task-date">{{ task.created_at }}</span>
+            
+            <form method="POST" action="{{ url_for('tasks', filter=filter_type) }}" class="task-actions">
+                <input type="hidden" name="toggle_task" value="{{ task.text }}">
+                <button type="submit" class="btn-toggle">
+                    {% if task.completed %}❌{% else %}✓{% endif %}
+                </button>
+                
+                <input type="hidden" name="delete_task" value="{{ task.text }}">
+                <button type="submit" class="btn-delete">Удалить</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="no-tasks">Нет задач для отображения.</p>
+    {% endif %}
+    
+    <a href="{{ url_for('logout') }}" class="btn logout-btn">Выйти</a>
+</div>
+{% endblock %}
