@@ -1,45 +1,61 @@
-{% extends "base.html" %}
-{% block title %}Мои задачи{% endblock %}
-
-{% block content %}
-<div class="tasks-container">
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мои задачи</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .flash { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        .task { padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px; }
+        .completed { text-decoration: line-through; color: #6c757d; }
+        button { padding: 5px 10px; margin: 2px; cursor: pointer; }
+        .add-task { margin: 20px 0; }
+        .filters { margin: 10px 0; }
+    </style>
+</head>
+<body>
     <h1>Мои задачи</h1>
-    <p>Добро пожаловать, {{ user.name }}!</p>
+    <p>Привет, {{ user.name }}! (<a href="{{ url_for('logout') }}">Выйти</a>)</p>
     
-    <div class="task-filters">
-        <a href="{{ url_for('tasks', filter='all') }}" class="{% if filter_type == 'all' %}active{% endif %}">Все задачи</a>
-        <a href="{{ url_for('tasks', filter='active') }}" class="{% if filter_type == 'active' %}active{% endif %}">Активные</a>
-        <a href="{{ url_for('tasks', filter='completed') }}" class="{% if filter_type == 'completed' %}active{% endif %}">Выполненные</a>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="filters">
+        <a href="{{ url_for('tasks', filter='all') }}">Все</a> |
+        <a href="{{ url_for('tasks', filter='active') }}">Активные</a> |
+        <a href="{{ url_for('tasks', filter='completed') }}">Завершенные</a>
     </div>
-    
-    <form method="POST" action="{{ url_for('tasks', filter=filter_type) }}" class="add-task-form">
-        <input type="text" name="task_text" placeholder="Введите новую задачу" required>
-        <button type="submit" class="btn">Добавить задачу</button>
-    </form>
-    
-    {% if tasks %}
-    <ul class="task-list">
+
+    <div class="add-task">
+        <form method="POST">
+            <input type="text" name="task_text" placeholder="Новая задача" required>
+            <button type="submit">Добавить</button>
+        </form>
+    </div>
+
+    <div class="task-list">
         {% for task in tasks %}
-        <li class="task-item {% if task.completed %}completed{% endif %}">
-            <span class="task-text">{{ task.text }}</span>
-            <span class="task-date">{{ task.created_at }}</span>
-            
-            <form method="POST" action="{{ url_for('tasks', filter=filter_type) }}" class="task-actions">
-                <input type="hidden" name="toggle_task" value="{{ task.text }}">
-                <button type="submit" class="btn-toggle">
-                    {% if task.completed %}❌{% else %}✓{% endif %}
-                </button>
-                
-                <input type="hidden" name="delete_task" value="{{ task.text }}">
-                <button type="submit" class="btn-delete">Удалить</button>
-            </form>
-        </li>
+            <div class="task {% if task.completed %}completed{% endif %}">
+                {{ task.text }}
+                <form method="POST" style="display: inline;">
+                    <button type="submit" name="toggle_task" value="{{ task.text }}">
+                        {% if task.completed %}❌ Отметить активной{% else %}✅ Завершить{% endif %}
+                    </button>
+                </form>
+                <form method="POST" style="display: inline;">
+                    <button type="submit" name="delete_task" value="{{ task.text }}" style="background-color: #dc3545; color: white;">🗑️ Удалить</button>
+                </form>
+            </div>
         {% endfor %}
-    </ul>
-    {% else %}
-    <p class="no-tasks">Нет задач для отображения.</p>
-    {% endif %}
-    
-    <a href="{{ url_for('logout') }}" class="btn logout-btn">Выйти</a>
-</div>
-{% endblock %}
+    </div>
+</body>
+</html>

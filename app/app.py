@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import List, Dict, Union
 
 app = Flask(__name__)
+app.secret_key = 'secret_key'
 
 DB_FILE = "users.json"
 TASKS_FILE = "users_tasks.json"
@@ -122,9 +123,11 @@ class UserManager:
 
     def delete_task(self, email: str, task_text: str) -> bool:
         if email in self.tasks:
+            initial_length = len(self.tasks[email])
             self.tasks[email] = [task for task in self.tasks[email] if task['text'] != task_text]
-            self._save_tasks()
-            return True
+            if len(self.tasks[email]) < initial_length:
+                self._save_tasks()
+                return True
         return False
 
 user_manager = UserManager()
