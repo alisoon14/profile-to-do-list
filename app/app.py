@@ -10,41 +10,26 @@ app.secret_key = 'secret_key'
 
 DB_FILE = "users.json"
 TASKS_FILE = "users_tasks.json"
+TRASH_FILE = "users_trash.json"
 
 class UserManager:
     def __init__(self):
-        self.users: List[Dict[str, str]] = self._load_users()
-        self.tasks: Dict[str, List[Dict[str, Union[str, bool]]]] = self._load_tasks()
+        self.users = self._load_data(DB_FILE, default=[])
+        self.tasks = self._load_data(TASKS_FILE)
+        self.trash = self._load_data(TRASH_FILE)
 
-    def _load_users(self) -> List[Dict[str, str]]:
-        if not os.path.exists(DB_FILE):
-            with open(DB_FILE, "w", encoding="utf-8") as file:
-                json.dump([], file)
-            return []
+    def _load_data(self, filename: str, default=None):
+        if default is None:
+            default = {} if filename != DB_FILE else []
         try:
-            with open(DB_FILE, "r", encoding="utf-8") as file:
-                return json.load(file)
-        except (json.JSONDecodeError, FileNotFoundError):
-            return []
+            with open(filename, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return default
 
-    def _load_tasks(self) -> Dict[str, List[Dict[str, Union[str, bool]]]]:
-        if not os.path.exists(TASKS_FILE):
-            with open(TASKS_FILE, "w", encoding="utf-8") as file:
-                json.dump({}, file)
-            return {}
-        try:
-            with open(TASKS_FILE, "r", encoding="utf-8") as file:
-                return json.load(file)
-        except (json.JSONDecodeError, FileNotFoundError):
-            return {}
-
-    def _save_users(self):
-        with open(DB_FILE, "w", encoding="utf-8") as file:
-            json.dump(self.users, file, ensure_ascii=False, indent=4)
-
-    def _save_tasks(self):
-        with open(TASKS_FILE, "w", encoding="utf-8") as file:
-            json.dump(self.tasks, file, ensure_ascii=False, indent=4)
+    def _save_data(self, data, filename: str):
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
 
     def _is_email_valid(self, email: str) -> bool:
         return re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$", email) is not None
@@ -73,7 +58,7 @@ class UserManager:
             return False
 
         self.users.append(user_data)
-        self._save_users()
+        self._save_data(self.users, DB_FILE)
         return True
 
     def login_user(self, email_or_phone: str, password: str) -> Union[Dict[str, str], None]:
@@ -81,7 +66,7 @@ class UserManager:
             if (user["email"] == email_or_phone or user["phone"] == email_or_phone) and user["password"] == password:
                 if user['email'] not in self.tasks:
                     self.tasks[user['email']] = []
-                    self._save_tasks()
+                    self._save_data(self.tasks, TASKS_FILE)
                 return user
         return None
 
@@ -99,7 +84,7 @@ class UserManager:
             self.tasks[email] = []
         
         self.tasks[email].append(new_task)
-        self._save_tasks()
+        self._save_data(self.tasks, TASKS_FILE)
         return True
 
     def get_tasks(self, email: str, filter_type: str = "all") -> List[Dict]:
@@ -117,17 +102,47 @@ class UserManager:
         for task in self.tasks.get(email, []):
             if task['text'] == task_text:
                 task['completed'] = not task['completed']
-                self._save_tasks()
+                self._save_data(self.tasks, TASKS_FILE)
                 return True
         return False
 
     def delete_task(self, email: str, task_text: str) -> bool:
-        if email in self.tasks:
-            initial_length = len(self.tasks[email])
-            self.tasks[email] = [task for task in self.tasks[email] if task['text'] != task_text]
-            if len(self.tasks[email]) < initial_length:
-                self._save_tasks()
-                return True
+        task_to_delete = None
+        for task in self.tasks.get(email, []):
+            if task['text'] == task_text:
+                task_to_delete = task
+                break
+        
+        if task_to_delete:
+            self.tasks[email].remove(task_to_delete)
+            if email not in self.trash:
+                self.trash[email] = []
+            self.trash[email].append(task_to_delete)
+            self._save_data(self.tasks, TASKS_FILE)
+            self._save_data(self.trash, TRASH_FILE)
+            return True
+        return False
+
+    def restore_task(self, email: str, task_text: str) -> bool:
+        task_to_restore = None
+        for task in self.trash.get(email, []):
+            if task['text'] == task_text:
+                task_to_restore = task
+                break
+        
+        if task_to_restore:
+            self.trash[email].remove(task_to_restore)
+            self.tasks[email].append(task_to_restore)
+            self._save_data(self.tasks, TASKS_FILE)
+            self._save_data(self.trash, TRASH_FILE)
+            return True
+        return False
+
+    def empty_trash(self, email: str) -> bool:
+        if email in self.trash and len(self.trash[email]) > 0:
+            self.trash[email] = []
+            self._save_data(self.trash, TRASH_FILE)
+            return True
         return False
 
 user_manager = UserManager()
@@ -199,14 +214,53 @@ def tasks():
         elif 'delete_task' in request.form:
             task_text = request.form['delete_task']
             if user_manager.delete_task(email, task_text):
-                flash('✅ Задача удалена!', 'success')
+                flash('✅ Задача перемещена в корзину!', 'success')
             else:
                 flash('❌ Ошибка при удалении задачи', 'error')
         
         return redirect(url_for('tasks', filter=filter_type))
     
     tasks = user_manager.get_tasks(email, filter_type)
-    return render_template('tasks.html', user=user, tasks=tasks, filter_type=filter_type)
+    trash_count = len(user_manager.trash.get(email, []))
+    return render_template('tasks.html', 
+                         user=user, 
+                         tasks=tasks, 
+                         filter_type=filter_type,
+                         trash_count=trash_count)
+
+@app.route('/trash')
+def trash():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    
+    user = session['user']
+    trash_tasks = user_manager.trash.get(user['email'], [])
+    return render_template('trash.html', user=user, tasks=trash_tasks)
+
+@app.route('/restore_task', methods=['POST'])
+def restore_task():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    
+    user = session['user']
+    task_text = request.form['task_text']
+    if user_manager.restore_task(user['email'], task_text):
+        flash('✅ Задача восстановлена!', 'success')
+    else:
+        flash('❌ Ошибка восстановления', 'error')
+    return redirect(url_for('trash'))
+
+@app.route('/empty_trash', methods=['POST'])
+def empty_trash():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    
+    user = session['user']
+    if user_manager.empty_trash(user['email']):
+        flash('🗑️ Корзина очищена!', 'success')
+    else:
+        flash('ℹ️ Корзина уже пуста', 'info')
+    return redirect(url_for('trash'))
 
 @app.route('/logout')
 def logout():
@@ -215,4 +269,11 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
+    for file in [DB_FILE, TASKS_FILE, TRASH_FILE]:
+        if not os.path.exists(file):
+            with open(file, 'w') as f:
+                if file == DB_FILE:
+                    json.dump([], f)
+                else:
+                    json.dump({}, f)
     app.run(debug=True)

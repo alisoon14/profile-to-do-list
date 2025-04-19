@@ -1,35 +1,27 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Вход</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto; padding: 20px; }
-        .flash { padding: 10px; margin: 10px 0; border-radius: 5px; }
-        .success { background-color: #d4edda; color: #155724; }
-        .error { background-color: #f8d7da; color: #721c24; }
-        input { width: 100%; padding: 8px; margin: 5px 0 15px; }
-        button { padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
-        button:hover { background: #0056b3; }
-    </style>
-</head>
-<body>
-    <h1>Вход</h1>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="flash {{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+{% extends "base.html" %}
+
+{% block title %}Вход{% endblock %}
+
+{% block content %}
+<div class="auth-form">
+    <h1 class="auth-title">Вход</h1>
+    
     <form method="POST">
-        <label>Email или телефон:</label>
-        <input type="text" name="email_or_phone" required>
-        <label>Пароль:</label>
-        <input type="password" name="password" required>
-        <button type="submit">Войти</button>
+        <div class="form-group">
+            <label>Email или телефон:</label>
+            <input type="text" name="email_or_phone" required class="form-input">
+        </div>
+        
+        <div class="form-group">
+            <label>Пароль:</label>
+            <input type="password" name="password" required class="form-input">
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Войти</button>
     </form>
-    <p>Нет аккаунта? <a href="{{ url_for('register') }}">Зарегистрируйтесь</a></p>
-</body>
-</html>
+    
+    <div class="auth-link">
+        Нет аккаунта? <a href="{{ url_for('register') }}">Зарегистрироваться</a>
+    </div>
+</div>
+{% endblock %}

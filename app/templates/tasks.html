@@ -1,61 +1,64 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мои задачи</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
-        .flash { padding: 10px; margin: 10px 0; border-radius: 5px; }
-        .success { background-color: #d4edda; color: #155724; }
-        .error { background-color: #f8d7da; color: #721c24; }
-        .warning { background-color: #fff3cd; color: #856404; }
-        .task { padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px; }
-        .completed { text-decoration: line-through; color: #6c757d; }
-        button { padding: 5px 10px; margin: 2px; cursor: pointer; }
-        .add-task { margin: 20px 0; }
-        .filters { margin: 10px 0; }
-    </style>
-</head>
-<body>
-    <h1>Мои задачи</h1>
-    <p>Привет, {{ user.name }}! (<a href="{{ url_for('logout') }}">Выйти</a>)</p>
-    
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="flash {{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+{% extends "base.html" %}
+
+{% block title %}Мои задачи{% endblock %}
+
+{% block content %}
+<div class="task-manager">
+    <div class="header-bar">
+        <div>
+            <h1>Добро пожаловать, {{ user.name }}!</h1>
+            <div class="task-counter">
+                <span>Всего задач: {{ tasks|length }}</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('trash') }}" class="btn btn-trash">
+                <i class="fas fa-trash"></i> Корзина ({{ trash_count }})
+            </a>
+            <a href="{{ url_for('logout') }}" class="btn btn-logout">Выйти</a>
+        </div>
+    </div>
 
     <div class="filters">
-        <a href="{{ url_for('tasks', filter='all') }}">Все</a> |
-        <a href="{{ url_for('tasks', filter='active') }}">Активные</a> |
-        <a href="{{ url_for('tasks', filter='completed') }}">Завершенные</a>
+        <a href="{{ url_for('tasks', filter='all') }}" class="filter{% if filter_type == 'all' %} active{% endif %}">Все</a>
+        <a href="{{ url_for('tasks', filter='active') }}" class="filter{% if filter_type == 'active' %} active{% endif %}">Активные</a>
+        <a href="{{ url_for('tasks', filter='completed') }}" class="filter{% if filter_type == 'completed' %} active{% endif %}">Завершенные</a>
     </div>
 
-    <div class="add-task">
-        <form method="POST">
-            <input type="text" name="task_text" placeholder="Новая задача" required>
-            <button type="submit">Добавить</button>
-        </form>
-    </div>
+    <form method="POST" class="add-task-form">
+        <input type="text" name="task_text" placeholder="Добавить новую задачу..." class="task-input">
+        <button type="submit" class="btn btn-add"><i class="fas fa-plus"></i> Добавить</button>
+    </form>
 
+    {% if tasks %}
     <div class="task-list">
         {% for task in tasks %}
-            <div class="task {% if task.completed %}completed{% endif %}">
-                {{ task.text }}
-                <form method="POST" style="display: inline;">
-                    <button type="submit" name="toggle_task" value="{{ task.text }}">
-                        {% if task.completed %}❌ Отметить активной{% else %}✅ Завершить{% endif %}
+        <div class="task-item{% if task.completed %} completed{% endif %}">
+            <div class="task-content">
+                <span class="task-text">{{ task.text }}</span>
+                <span class="task-date">{{ task.created_at }}</span>
+            </div>
+            <div class="task-actions">
+                <form method="POST" class="action-form">
+                    <button type="submit" name="toggle_task" value="{{ task.text }}" class="btn btn-toggle">
+                        {% if task.completed %}<i class="fas fa-undo"></i>{% else %}<i class="fas fa-check"></i>{% endif %}
                     </button>
                 </form>
-                <form method="POST" style="display: inline;">
-                    <button type="submit" name="delete_task" value="{{ task.text }}" style="background-color: #dc3545; color: white;">🗑️ Удалить</button>
+                <form method="POST" class="action-form">
+                    <button type="submit" name="delete_task" value="{{ task.text }}" class="btn btn-delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </form>
             </div>
+        </div>
         {% endfor %}
     </div>
-</body>
-</html>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-tasks empty-icon"></i>
+        <h3>Нет задач</h3>
+        <p>Начните добавлять задачи с помощью формы выше</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
