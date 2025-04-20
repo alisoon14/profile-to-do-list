@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="{{ session.get('theme', 'light') }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +9,16 @@
 </head>
 <body>
     <div class="container">
+        <div class="theme-switcher">
+            <button onclick="window.location.href='{{ url_for('toggle_theme') }}'">
+                {% if session.get('theme', 'light') == 'light' %}
+                    <i class="fas fa-moon"></i>
+                {% else %}
+                    <i class="fas fa-sun"></i>
+                {% endif %}
+            </button>
+        </div>
+        
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="flash-messages">
