@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import List, Dict, Union
 
 app = Flask(__name__)
-app.secret_key = 'secret_key'
+app.secret_key = 'your_secret_key_here'
 
 DB_FILE = "users.json"
 TASKS_FILE = "users_tasks.json"
@@ -180,6 +180,7 @@ def login():
         user = user_manager.login_user(email_or_phone, password)
         if user:
             session['user'] = user
+            session.setdefault('theme', 'light')
             flash(f'✅ Вход выполнен! Добро пожаловать, {user["name"]}!', 'success')
             return redirect(url_for('tasks'))
         else:
@@ -261,6 +262,12 @@ def empty_trash():
     else:
         flash('ℹ️ Корзина уже пуста', 'info')
     return redirect(url_for('trash'))
+
+@app.route('/toggle_theme')
+def toggle_theme():
+    current_theme = session.get('theme', 'light')
+    session['theme'] = 'dark' if current_theme == 'light' else 'light'
+    return redirect(request.referrer or url_for('index'))
 
 @app.route('/logout')
 def logout():
