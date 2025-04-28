@@ -23,20 +23,45 @@
         <a href="{{ url_for('tasks', filter='all') }}" class="filter{% if filter_type == 'all' %} active{% endif %}">Все</a>
         <a href="{{ url_for('tasks', filter='active') }}" class="filter{% if filter_type == 'active' %} active{% endif %}">Активные</a>
         <a href="{{ url_for('tasks', filter='completed') }}" class="filter{% if filter_type == 'completed' %} active{% endif %}">Завершенные</a>
+        <a href="{{ url_for('tasks', filter='urgent') }}" class="filter{% if filter_type == 'urgent' %} active{% endif %}">Срочные</a>
+        <a href="{{ url_for('tasks', filter='overdue') }}" class="filter{% if filter_type == 'overdue' %} active{% endif %}">Просроченные</a>
     </div>
 
     <form method="POST" class="add-task-form">
-        <input type="text" name="task_text" placeholder="Добавить новую задачу..." class="task-input">
-        <button type="submit" class="btn btn-add"><i class="fas fa-plus"></i> Добавить</button>
+        <input type="text" name="task_text" placeholder="Добавить новую задачу..." class="task-input" required>
+        <input type="date" name="due_date" class="form-input" min="{{ now.strftime('%Y-%m-%d') }}">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить</button>
     </form>
 
     {% if tasks %}
     <div class="task-list">
         {% for task in tasks %}
-        <div class="task-item{% if task.completed %} completed{% endif %}">
+        {% set due_date = task.due_date %}
+        {% set due_datetime = due_date and datetime.strptime(due_date, '%Y-%m-%d') %}
+        {% set days_left = due_datetime and (due_datetime - now).days %}
+        <div class="task-item{% if task.completed %} completed{% endif %} {% if days_left is not none %}{% if days_left < 0 %} overdue{% elif days_left <= 3 %} urgent{% endif %}{% endif %}">
             <div class="task-content">
                 <span class="task-text">{{ task.text }}</span>
-                <span class="task-date">{{ task.created_at }}</span>
+                <div class="task-meta">
+                    {% if due_date %}
+                    <span class="task-date">
+                        <i class="fas fa-calendar-alt"></i> 
+                        Срок: {{ due_date }}
+                        {% if days_left is not none %}
+                            {% if days_left < 0 %}
+                                (Просрочено {{ -days_left }} дн. назад)
+                            {% elif days_left == 0 %}
+                                (Сегодня)
+                            {% elif days_left == 1 %}
+                                (Завтра)
+                            {% else %}
+                                (Осталось {{ days_left }} дн.)
+                            {% endif %}
+                        {% endif %}
+                    </span>
+                    {% endif %}
+                    <span class="task-date"><i class="fas fa-clock"></i> Создано: {{ task.created_at }}</span>
+                </div>
             </div>
             <div class="task-actions">
                 <form method="POST" class="action-form">
@@ -45,7 +70,7 @@
                     </button>
                 </form>
                 <form method="POST" class="action-form">
-                    <button type="submit" name="delete_task" value="{{ task.text }}" class="btn btn-delete">
+                    <button type="submit" name="delete_task" value="{{ task.text }}" class="btn btn-danger">
                         <i class="fas fa-trash"></i>
                     </button>
                 </form>
@@ -57,7 +82,7 @@
     <div class="empty-state">
         <i class="fas fa-tasks empty-icon"></i>
         <h3>Нет задач</h3>
-        <p>Начните добавлять задачи с помощью формы выше</p>
+        <p>Добавьте свою первую задачу с помощью формы выше</p>
     </div>
     {% endif %}
 </div>
