@@ -70,14 +70,15 @@ class UserManager:
                 return user
         return None
 
-    def add_task(self, email: str, task_text: str) -> bool:
+    def add_task(self, email: str, task_text: str, due_date: str = None) -> bool:
         if not task_text:
             return False
             
         new_task = {
             "text": task_text,
             "completed": False,
-            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "due_date": due_date  # Добавляем срок выполнения
         }
         
         if email not in self.tasks:
@@ -87,14 +88,41 @@ class UserManager:
         self._save_data(self.tasks, TASKS_FILE)
         return True
 
+    def is_task_urgent(self, task: Dict) -> bool:
+        """Проверяет, является ли задача срочной (осталось <= 3 дня)"""
+        if not task.get('due_date'):
+            return False
+        try:
+            due_date = datetime.strptime(task['due_date'], "%Y-%m-%d")
+            days_left = (due_date - datetime.now()).days
+            return 0 <= days_left <= 3
+        except:
+            return False
+
+    def is_task_overdue(self, task: Dict) -> bool:
+        """Проверяет, просрочена ли задача"""
+        if not task.get('due_date'):
+            return False
+        try:
+            due_date = datetime.strptime(task['due_date'], "%Y-%m-%d")
+            return (due_date - datetime.now()).days < 0
+        except:
+            return False
+
     def get_tasks(self, email: str, filter_type: str = "all") -> List[Dict]:
         if email not in self.tasks:
             return []
-            
+        
         if filter_type == "active":
             return [task for task in self.tasks[email] if not task['completed']]
         elif filter_type == "completed":
             return [task for task in self.tasks[email] if task['completed']]
+        elif filter_type == "urgent":
+            return [task for task in self.tasks[email] if not task['completed'] and 
+               (self.is_task_urgent(task) or self.is_task_overdue(task))]
+        elif filter_type == "overdue":
+            return [task for task in self.tasks[email] if not task['completed'] and 
+               self.is_task_overdue(task)]
         else:
             return self.tasks[email]
 
@@ -201,8 +229,9 @@ def tasks():
     if request.method == 'POST':
         if 'task_text' in request.form:
             task_text = request.form['task_text'].strip()
+            due_date = request.form.get('due_date', '').strip()
             if task_text:
-                if user_manager.add_task(email, task_text):
+                if user_manager.add_task(email, task_text, due_date if due_date else None):
                     flash('✅ Задача успешно добавлена!', 'success')
                 else:
                     flash('❌ Ошибка при добавлении задачи', 'error')
@@ -227,7 +256,9 @@ def tasks():
                          user=user, 
                          tasks=tasks, 
                          filter_type=filter_type,
-                         trash_count=trash_count)
+                         trash_count=trash_count,
+                         now=datetime.now(),
+                         datetime=datetime)  
 
 @app.route('/trash')
 def trash():
